@@ -1,8 +1,7 @@
 #!/bin/sh
 
-BOOTSTRAP_BASE_URL="http://192.168.1.195:1180/"
-BASE_URL="http://192.168.1.195:1180/"
-ZIGBEE_SERIAL_PORT=""
+BASE_URL="https://github.com/zalatnaicsongor/MGLGWFW/raw/main/"
+ZIGBEE_SERIAL_PORT="/dev/to_be_determined"
 
 run_script() {
     kill_process_by_name "openmiio_agent"
@@ -37,10 +36,11 @@ upload_firmware() {
 
 get_bootstrap_bins() {
     /bin/wget -O /data/curl 'http://master.dl.sourceforge.net/project/mgl03/bin/curl?viasf=1'
-    /bin/wget -O /data/sz "$BASE_URL/mips/sz"
-    /bin/wget -O /data/ser2net "$BASE_URL/mips/ser2net"
-
     chmod +x /data/curl
+
+    /data/curl -o /data/sz "$BASE_URL/mips/sz"
+    /data/curl -o /data/ser2net "$BASE_URL/mips/ser2net"
+
     chmod +x /data/sz
     chmod +x /data/ser2net
 }
