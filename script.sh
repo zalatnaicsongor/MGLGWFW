@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASE_URL="https://github.com/zalatnaicsongor/MGLGWFW/raw/main/"
+BASE_URL="https://raw.githubusercontent.com/zalatnaicsongor/MGLGWFW/main"
 ZIGBEE_SERIAL_PORT="/dev/to_be_determined"
 
 run_script() {
@@ -19,7 +19,7 @@ run_script() {
     ZIGBEE_SERIAL_PORT="/dev/ttyS2"
 
     upload_firmware
-    echo "now you can start ser2net with 'ser2net -d -C '7000:raw:0:/dev/ttyS2:115200 8DATABITS NONE 1STOPBIT''"
+    echo "now you can start ser2net with ser2net -d -C '7000:raw:0:/dev/ttyS2:115200 8DATABITS NONE 1STOPBIT'"
 }
 
 upload_firmware() {
@@ -37,24 +37,33 @@ upload_firmware() {
 get_bootstrap_bins() {
     /bin/wget -O /data/curl 'http://master.dl.sourceforge.net/project/mgl03/bin/curl?viasf=1'
     chmod +x /data/curl
+    /data/curl https://curl.se/ca/cacert-2024-03-11.pem -k -o /data/ca-bundle.crt
 
-    /data/curl -o /data/sz "$BASE_URL/mips/sz"
-    /data/curl -o /data/ser2net "$BASE_URL/mips/ser2net"
+    EXPECTED_SUM="1794c1d4f7055b7d02c2170337b61b48a2ef6c90d77e95444fd2596f4cac609f"
+    ACTUAL_SUM=$(sha256sum /data/ca-bundle.crt | awk '{print $1}')
+
+    if [ $EXPECTED_SUM != "$ACTUAL_SUM" ]; then
+        echo "sha256sum of /data/ca-bundle.crt $ACTUAL_SUM invalid"
+        exit 1
+    fi
+
+    /data/curl -o /data/sz "$BASE_URL/mips/sz" --cacert /data/ca-bundle.crt
+    /data/curl -o /data/ser2net "$BASE_URL/mips/ser2net" --cacert /data/ca-bundle.crt
 
     chmod +x /data/sz
     chmod +x /data/ser2net
 }
 
 get_rcp_firmware() {
-    /data/curl -o /tmp/rcp.gbl "$BASE_URL/mg1b/rcpmg1b.gbl"
+    /data/curl -o /tmp/rcp.gbl "$BASE_URL/mg1b/rcpmg1b.gbl" --cacert /data/ca-bundle.crt
 }
 
 start_rcp_upload() {
     zigbee_inter_bootloader.sh 0 && usleep 10000 && zigbee_reset.sh 0 && usleep 10000 && zigbee_reset.sh 1
     sleep 1
-    echo -e '1' > $ZIGBEE_SERIAL_PORT
+    echo -e '1' >$ZIGBEE_SERIAL_PORT
     sleep 1
-    /data/sz -X /tmp/rcp.gbl < $ZIGBEE_SERIAL_PORT > $ZIGBEE_SERIAL_PORT
+    /data/sz -X /tmp/rcp.gbl <$ZIGBEE_SERIAL_PORT >$ZIGBEE_SERIAL_PORT
 }
 
 kill_process_by_name() {
@@ -76,8 +85,6 @@ kill_process_by_name() {
 
     echo "killing $PID"
     kill "$PID"
-
-    return 0
 }
 
 spawn_placeholder() {
